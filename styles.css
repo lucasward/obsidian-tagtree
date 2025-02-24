@@ -6,3 +6,37 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.tag-tree {
+    list-style-type: none;
+    /* Remove bullet points */
+    padding: 0;
+    /* Remove default padding */
+    margin: 0;
+    /* Remove default margin */
+}
+
+.tag-item {
+    padding: 10px;
+    margin: 4px 0;
+    background-color: #f0f0f05c;
+    /* Light background for tags */
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: calc(100% - 20px);
+    /* Full width minus padding */
+
+}
+
+.tag-item:hover {
+    background-color: #d0e0f0;
+    /* color: #000000; */
+    /* Change text color on hover */
+}
+
+.tag-item.drag-over {
+    background-color: #b0c4de;
+    color: #f0f0f05c;
+    /* Highlight when dragging over */
+}
