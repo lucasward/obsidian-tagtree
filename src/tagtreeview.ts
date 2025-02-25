@@ -6,12 +6,13 @@ export type IconName = 'folder-tree';
 export class TagTreeView extends ItemView {
   // State object to keep track of open/closed tags
   private tagState: Record<string, boolean> = {};
-
   // Method to search notes with selected tags
   private selectedTags: string[] = []; // Array to hold selected tags
+  private tagSource: string; // Add property for tagSource
 
-  constructor(leaf: WorkspaceLeaf) {
+  constructor(leaf: WorkspaceLeaf, tagSource: string) {
     super(leaf);
+    this.tagSource = tagSource; // Store the tagSource setting
   }
 
   getViewType() {
@@ -82,10 +83,26 @@ export class TagTreeView extends ItemView {
     const allTags = this.getAllTags();
     this.mergeTags(tagStructure, allTags);
 
+    // Remove tags that are no longer present
+    this.removeMissingTags(tagStructure, allTags);
+
     // Save the updated structure back to the file
     await this.saveTagStructure(tagStructure);
 
     return tagStructure;
+  }
+
+  // Method to remove tags that are no longer present
+  private removeMissingTags(tagStructure: any, currentTags: string[]) {
+    Object.keys(tagStructure).forEach(tag => {
+      if (!currentTags.includes(tag)) {
+        delete tagStructure[tag]; // Remove the tag if it's not in the current tags
+        console.log(`Removed missing tag: ${tag}`);
+      } else {
+        // Recursively check child tags
+        this.removeMissingTags(tagStructure[tag], currentTags);
+      }
+    });
   }
 
   // Recursive function to merge tags
@@ -267,7 +284,7 @@ export class TagTreeView extends ItemView {
           }
 
           // Create a combined search query for all selected tags
-          const searchQuery = this.selectedTags.map(t => `tag:${t}`).join(' '); // Use space instead of AND
+          const searchQuery = this.selectedTags.join(' '); // Use space instead of tag: prefix
           console.log('Searching for notes with tags:', this.selectedTags);
 
           const searchLeaves = this.app.workspace.getLeavesOfType('search');
@@ -407,18 +424,23 @@ export class TagTreeView extends ItemView {
       if (fileCache) {
         // Add each tag from the frontmatter to the set
         if (fileCache.frontmatter && fileCache.frontmatter.tags) {
-          fileCache.frontmatter.tags.forEach((tag: string) => tagsSet.add(tag));
+          if (Array.isArray(fileCache.frontmatter.tags)) {
+            fileCache.frontmatter.tags.forEach((tag: string) => tagsSet.add(tag));
+          }
         }
+
+        // Add tags from the custom source property if it exists
+        if (this.tagSource && fileCache.frontmatter && fileCache.frontmatter[this.tagSource]) {
+          const customTags = fileCache.frontmatter[this.tagSource];
+          if (Array.isArray(customTags)) {
+            customTags.forEach((tag: string) => tagsSet.add(tag));
+          }
+        }
+
         // Add each tag from the body to the set
         if (fileCache.tags) {
           fileCache.tags.forEach(tag => tagsSet.add(tag.tag));
         }
-        // Check for invalid frontmatter keys and add them as tags
-        Object.keys(fileCache.frontmatter || {}).forEach(key => {
-          if (!tagsSet.has(key) && key !== 'tags') { // Exclude recognized tags
-            tagsSet.add(key); // Add invalid frontmatter key as a tag
-          }
-        });
       }
     });
 

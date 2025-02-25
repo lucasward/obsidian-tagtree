@@ -1,16 +1,17 @@
+// In main.ts
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, addIcon, ItemView, WorkspaceLeaf } from 'obsidian';
 import { TagTreeView, TAG_TREE_VIEW } from 'tagtreeview';
-//import { overrideTagValidation } from './tagValidation';
-// Remember to rename these classes and interfaces!
 
 interface TagTreeSettings {
 	mySetting: string;
 	allowSpecialCharacters: boolean;
+	tagSource: string;
 }
 
 const DEFAULT_SETTINGS: TagTreeSettings = {
 	mySetting: 'default',
-	allowSpecialCharacters: false
+	allowSpecialCharacters: false,
+	tagSource: 'context'
 }
 
 export default class TagTreePlugin extends Plugin {
@@ -20,7 +21,7 @@ export default class TagTreePlugin extends Plugin {
 	async onload() {
 		this.registerView(
 			TAG_TREE_VIEW,
-			(leaf) => new TagTreeView(leaf)
+			(leaf) => new TagTreeView(leaf, this.settings.tagSource)
 		);
 
 		this.addRibbonIcon('tree-pine', 'Activate view', () => {
@@ -168,6 +169,15 @@ class TagTreeSettingTab extends PluginSettingTab {
 		// 		}));
 
 		// Toggle for allowing special characters in tags
+		new Setting(containerEl)
+			.setName('Tag Source Property')
+			.setDesc('Specify the frontmatter property to source tags from (e.g., "context").')
+			.addText(text => text
+				.setValue(this.plugin.settings.tagSource)
+				.onChange(async (value) => {
+					this.plugin.settings.tagSource = value;
+					await this.plugin.saveSettings();
+				}));
 		new Setting(containerEl)
 			.setName('Allow Special Characters in Tags')
 			.setDesc('Enable this to allow tags with special characters.')
