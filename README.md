@@ -1,40 +1,44 @@
-# Obsidian Tagtree Plugin
+# TagTree Plugin for Obsidian
 
-## Releasing new releases
+## Overview
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+The TagTree plugin for Obsidian provides a hierarchical view of your tags, allowing for easy navigation and management of tags within your notes. It enhances your tagging experience by enabling multi-tag searches similar to those found in Evernote.
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## Features
 
-## Adding your plugin to the community plugin list
+- **Hierarchical Tag View**: Visualize your tags in a tree structure.
+- **Multi-Tag Search**: Search for notes containing multiple tags simultaneously.
+- **Custom Tag Source**: Specify a frontmatter property to source tags from.
+- **Drag and Drop Support**: Easily rearrange tags within the tree.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+## Installation
 
-## How to use
+1. Download the latest release from the [GitHub Releases](https://github.com/lucasward/obsidian-tagtree/releases).
+2. Place the unzipped folder into your plugins directory.
+3. Enable the TagTree plugin in the Obsidian settings.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## Usage
 
-## Manually installing the plugin
+- Open the TagTree view from the sidebar to see your tags organized in a tree structure.
+- Click on any tag to search for notes associated with it.
+- Use the refresh button to reload the tag structure.
+- Drag and drop tags to rearrange them within the tree.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Configuration
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+You can configure the plugin settings by navigating to the TagTree settings tab in the Obsidian settings. Here you can:
+
+- Set the frontmatter property to source tags from.
+
+## Contributing
+
+Contributions are welcome! If you have suggestions or improvements, feel free to open an issue or submit a pull request.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Thanks to the Obsidian community for their support and feedback.
+- Inspired by the tagging systems in applications like Joplin and Evernote.

@@ -19,6 +19,7 @@ export default class TagTreePlugin extends Plugin {
 	public allowSpecialCharacters: boolean = false; // Default value
 
 	async onload() {
+		await this.loadSettings();
 		this.registerView(
 			TAG_TREE_VIEW,
 			(leaf) => new TagTreeView(leaf, this.settings.tagSource)
@@ -27,7 +28,6 @@ export default class TagTreePlugin extends Plugin {
 		this.addRibbonIcon('tree-pine', 'Activate view', () => {
 			this.activateView();
 		});
-		await this.loadSettings();
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		//const statusBarItemEl = this.addStatusBarItem();
@@ -46,7 +46,7 @@ export default class TagTreePlugin extends Plugin {
 			id: 'sample-editor-command',
 			name: 'Sample editor command',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
+				// console.log(editor.getSelection());
 				editor.replaceSelection('Sample Editor Command');
 			}
 		});
@@ -76,7 +76,7 @@ export default class TagTreePlugin extends Plugin {
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
 		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
+			// console.log('click', evt);
 		});
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
@@ -117,12 +117,12 @@ export default class TagTreePlugin extends Plugin {
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-		console.log('Loaded settings:', this.settings); // Log loaded settings
+		// console.log('Loaded settings:', this.settings); // Log loaded settings
 		this.allowSpecialCharacters = this.settings.allowSpecialCharacters; // Load saved setting
 	}
 
 	async saveSettings() {
-		console.log('Saving settings:', this.settings); // Log settings to be saved
+		// console.log('Saving settings:', this.settings); // Log settings to be saved
 		await this.saveData(this.settings);
 	}
 }
@@ -178,17 +178,17 @@ class TagTreeSettingTab extends PluginSettingTab {
 					this.plugin.settings.tagSource = value;
 					await this.plugin.saveSettings();
 				}));
-		new Setting(containerEl)
-			.setName('Allow Special Characters in Tags')
-			.setDesc('Enable this to allow tags with special characters.')
-			.addToggle(toggle =>
-				toggle
-					.setValue(this.plugin.allowSpecialCharacters)
-					.onChange(async (value) => {
-						this.plugin.allowSpecialCharacters = value;
-						this.plugin.settings.allowSpecialCharacters = value; // Update the settings object
-						await this.plugin.saveSettings(); // Save the setting
-					})
-			);
+		// new Setting(containerEl)
+		// 	.setName('Allow Special Characters in Tags')
+		// 	.setDesc('Enable this to allow tags with special characters.')
+		// 	.addToggle(toggle =>
+		// 		toggle
+		// 			.setValue(this.plugin.allowSpecialCharacters)
+		// 			.onChange(async (value) => {
+		// 				this.plugin.allowSpecialCharacters = value;
+		// 				this.plugin.settings.allowSpecialCharacters = value; // Update the settings object
+		// 				await this.plugin.saveSettings(); // Save the setting
+		// 			})
+		// 	);
 	}
 }

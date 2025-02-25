@@ -9,6 +9,8 @@ export class TagTreeView extends ItemView {
   // Method to search notes with selected tags
   private selectedTags: string[] = []; // Array to hold selected tags
   private tagSource: string; // Add property for tagSource
+  private originalTagStructure: any; // Add originalTagStructure property
+  private sortState: number = 0; // Add sortState property
 
   constructor(leaf: WorkspaceLeaf, tagSource: string) {
     super(leaf);
@@ -42,7 +44,8 @@ export class TagTreeView extends ItemView {
       event.preventDefault();
       const draggedTag = event.dataTransfer?.getData('text/plain');
       if (draggedTag) {
-        console.log('Dropped outside, resetting to top level:', draggedTag);
+        // Remove console logs from onOpen
+        // console.log('Dropped outside, resetting to top level:', draggedTag);
         const tagStructure = await this.loadTagStructure();
         const draggedData = this.removeTag(tagStructure, draggedTag);
         tagStructure[draggedTag] = draggedData; // Reset to top level
@@ -70,13 +73,15 @@ export class TagTreeView extends ItemView {
       try {
         tagStructure = JSON.parse(data);
       } catch (error) {
-        console.error('Error parsing tag structure file:', error);
+        // Remove console logs from loadTagStructure
+        // console.error('Error parsing tag structure file:', error);
       }
     } else {
       // Create the file with an empty structure if it doesn't exist
       tagStructure = {}; // Initialize with an empty structure
       await vault.create(fileName, JSON.stringify(tagStructure, null, 2));
-      console.log('Created new tag structure file:', fileName);
+      // Remove console logs from loadTagStructure
+      // console.log('Created new tag structure file:', fileName);
     }
 
     // Merge new tags from Obsidian
@@ -97,7 +102,8 @@ export class TagTreeView extends ItemView {
     Object.keys(tagStructure).forEach(tag => {
       if (!currentTags.includes(tag)) {
         delete tagStructure[tag]; // Remove the tag if it's not in the current tags
-        console.log(`Removed missing tag: ${tag}`);
+        // Remove console logs from removeMissingTags
+        // console.log(`Removed missing tag: ${tag}`);
       } else {
         // Recursively check child tags
         this.removeMissingTags(tagStructure[tag], currentTags);
@@ -113,9 +119,11 @@ export class TagTreeView extends ItemView {
     newTags.forEach(tag => {
       if (!this.findTag(existingStructure, tag)) {
         existingStructure[tag] = {}; // Add the tag if it doesn't exist
-        console.log(`Added new tag: ${tag}`);
+        // Remove console logs from mergeTags
+        // console.log(`Added new tag: ${tag}`);
       } else {
-        console.log(`Tag already exists: ${tag}`);
+        // Remove console logs from mergeTags
+        // console.log(`Tag already exists: ${tag}`);
       }
     });
   }
@@ -172,7 +180,8 @@ export class TagTreeView extends ItemView {
         state: { query: '' }, // Clear the search query
       });
       this.app.workspace.setActiveLeaf(searchLeaves[0]);
-      console.log('Cleared search view.');
+      // Remove console logs from clearTagSearch
+      // console.log('Cleared search view.');
     }
   }
 
@@ -180,7 +189,8 @@ export class TagTreeView extends ItemView {
   private async renderTagTree(container: HTMLElement, tagStructure: any) {
     // Clear the container
     container.empty();
-    console.log('Rendering tag tree...');
+    // Remove console logs from renderTagTree
+    // console.log('Rendering tag tree...');
 
     // Load the tag state from local storage
     this.loadTagState();
@@ -192,17 +202,96 @@ export class TagTreeView extends ItemView {
     // Create a toolbar container
     const toolbar = container.createEl('div');
     toolbar.addClass('tag-toolbar'); // Add a class for styling
-    toolbar.style.display = 'flex'; // Use flexbox for layout
-    toolbar.style.justifyContent = 'space-between'; // Space buttons evenly
-    toolbar.style.width = '100%'; // Full width
+    //toolbar.style.display = 'flex'; // Use flexbox for layout
+    //toolbar.style.justifyContent = 'center'; // Space buttons evenly
+    //toolbar.style.width = '100%'; // Full width
 
-    //const refreshButton = toolbar.createEl('button', { text: 'Refresh' });
+    // Add button for opening/closing all levels
+    const toggleAllButton = toolbar.createEl('button');
+    toggleAllButton.addClass('toolbar-item'); // Add a class for styling
+    toggleAllButton.style.flex = '1'; // Take up equal space
+    const toggleAllIconOpen = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-open icon-size"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>`;
+    const toggleAllIconClosed = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-closed icon-size"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M2 10h20"/></svg>`;
+    // Determine initial state based on tag visibility
+    const allInitiallyVisible = Object.values(this.tagState).every(state => state);
+    toggleAllButton.innerHTML = allInitiallyVisible ? toggleAllIconClosed : toggleAllIconOpen;
+    toggleAllButton.onclick = () => {
+      const allVisible = Object.values(this.tagState).every(state => state);
+      const newState = !allVisible;
+      Object.keys(this.tagState).forEach(tag => {
+        this.tagState[tag] = newState; // Set all tags to the new state
+      });
+      this.saveTagState(); // Save the updated state
+      this.renderTagTree(container as HTMLElement, tagStructure); // Re-render the tag tree
+      // Update the icon based on the new visibility state
+      toggleAllButton.innerHTML = newState ? toggleAllIconClosed : toggleAllIconOpen;
+    };
+
+    //-------------------------------------------------------------------------------------------------------------------------------
+
+    // Add button for sorting top level tags with cycling sort state
+    const sortTopLevelButton = toolbar.createEl('button');
+    sortTopLevelButton.addClass('toolbar-item'); // Add a class for styling
+    sortTopLevelButton.style.flex = '1'; // Take up equal space
+
+    // Icons for different sort states
+    const sortAZIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-a-z icon-size"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></svg>`;
+    const sortZAIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-a-z icon-size"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="M20 8h-5"/><path d="M15 10V6.5a2.5 2.5 0 0 1 5 0V10"/><path d="M15 14h5l-5 6h5"/></svg>`;
+    const sortDefaultIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered icon-size"><path d="M10 12h11"/><path d="M10 18h11"/><path d="M10 6h11"/><path d="M4 10h2"/><path d="M4 6h1v4"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>`;
+
+    // Store original structure as a class property
+    if (!this.originalTagStructure) {
+      this.originalTagStructure = JSON.parse(JSON.stringify(tagStructure)); // Ensure it's initialized only once
+    }
+
+    //sortTopLevelButton.innerHTML = sortAZIcon;
+    sortTopLevelButton.innerHTML =
+      this.sortState === 0 ? sortAZIcon :
+        this.sortState === 1 ? sortZAIcon :
+          sortDefaultIcon; // This assumes sortState can only be 0, 1, or 2
+
+    sortTopLevelButton.onclick = () => {
+      // Cycle through sort states
+      this.sortState = (this.sortState + 1) % 3; // Use this.sortState to maintain class context
+
+      // Create a new sorted structure object
+      const newStructure: Record<string, any> = {};
+
+      // Apply the appropriate sorting based on the current state
+      if (this.sortState === 0) {
+        // Default sort (original order from JSON)
+        sortTopLevelButton.innerHTML = sortDefaultIcon; // Set to default icon
+        this.renderTagTree(container as HTMLElement, this.originalTagStructure); // Render original structure
+        return;
+      } else if (this.sortState === 1) {
+        // Alphabetical sort (A-Z)
+        sortTopLevelButton.innerHTML = sortAZIcon; // Set to A-Z icon
+        const keys = Object.keys(this.originalTagStructure).sort(); // Sort keys A-Z
+        keys.forEach(key => {
+          newStructure[key] = this.originalTagStructure[key]; // Build new structure
+        });
+      } else {
+        // Reverse alphabetical sort (Z-A)
+        sortTopLevelButton.innerHTML = sortZAIcon; // Set to Z-A icon
+        const keys = Object.keys(this.originalTagStructure).sort().reverse(); // Sort keys Z-A
+        keys.forEach(key => {
+          newStructure[key] = this.originalTagStructure[key]; // Build new structure
+        });
+      }
+
+      // Render the new structure
+      this.renderTagTree(container as HTMLElement, newStructure);
+    };
+
+    //-------------------------------------------------------------------------------------------------------------------------------
+
+    // Add the refresh button
     const refreshButton = toolbar.createEl('button');
-    refreshButton.addClass('tag-item'); // Add a class for styling
+    refreshButton.addClass('toolbar-item'); // Add a class for styling
     refreshButton.style.flex = '1'; // Take up equal space
 
     // Create the SVG for the refresh icon
-    const refreshIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`;
+    const refreshIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw icon-size"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>`;
 
     // Set the inner HTML of the button to the SVG
     refreshButton.innerHTML = refreshIcon;
@@ -284,8 +373,9 @@ export class TagTreeView extends ItemView {
           }
 
           // Create a combined search query for all selected tags
-          const searchQuery = this.selectedTags.join(' '); // Use space instead of tag: prefix
-          console.log('Searching for notes with tags:', this.selectedTags);
+          const searchQuery = this.selectedTags.map(t => `"${t}"`).join(' '); // Wrap each tag in quotes
+          // Remove console logs from onOpen
+          // console.log('Searching for notes with tags:', this.selectedTags);
 
           const searchLeaves = this.app.workspace.getLeavesOfType('search');
           if (searchLeaves.length > 0) {
@@ -294,7 +384,8 @@ export class TagTreeView extends ItemView {
               state: { query: searchQuery },
             });
             this.app.workspace.setActiveLeaf(searchLeaves[0]);
-            console.log('Updated existing search view with query:', searchQuery);
+            // Remove console logs from onOpen
+            // console.log('Updated existing search view with query:', searchQuery);
           } else {
             const newLeaf = this.app.workspace.getLeaf(true);
             newLeaf.setViewState({
@@ -302,28 +393,33 @@ export class TagTreeView extends ItemView {
               state: { query: searchQuery },
             });
             this.app.workspace.setActiveLeaf(newLeaf);
-            console.log('Opened new search view with query:', searchQuery);
+            // Remove console logs from onOpen
+            // console.log('Opened new search view with query:', searchQuery);
           }
         });
 
         // Add drag event listeners
         tagElement.addEventListener('dragstart', (event) => {
-          console.log('dragstart:', tag);
+          // Remove console logs from onOpen
+          // console.log('dragstart:', tag);
           event.dataTransfer?.setData('text/plain', tag);
         });
 
         tagElement.addEventListener('dragover', (event) => {
-          console.log('dragover:', tag);
+          // Remove console logs from onOpen
+          // console.log('dragover:', tag);
           event.preventDefault(); // Allow drop
         });
 
         tagElement.addEventListener('drop', async (event) => {
-          console.log('drop:', tag);
+          // Remove console logs from onOpen
+          // console.log('drop:', tag);
           event.preventDefault();
           event.stopPropagation(); // Prevent the global drop event from firing
           const draggedTag = event.dataTransfer?.getData('text/plain');
           if (draggedTag) {
-            console.log('Dragging:', draggedTag, 'to:', tag);
+            // Remove console logs from onOpen
+            // console.log('Dragging:', draggedTag, 'to:', tag);
             await this.handleTagDragAndDrop(draggedTag, tag);
           }
         });
@@ -336,7 +432,8 @@ export class TagTreeView extends ItemView {
     // Start rendering from the root
     renderTags(tagStructure, ul);
     container.appendChild(ul);
-    console.log('Finished rendering tag tree.');
+    // Remove console logs from renderTagTree
+    // console.log('Finished rendering tag tree.');
   }
 
   // Method to handle drag-and-drop and update the tag structure
@@ -345,7 +442,8 @@ export class TagTreeView extends ItemView {
 
     // Prevent invalid drops (e.g., dragging onto itself or a descendant)
     if (draggedTag === targetTag || this.isDescendant(tagStructure, draggedTag, targetTag)) {
-      console.warn('Invalid drop operation');
+      // Remove console logs from handleTagDragAndDrop
+      // console.warn('Invalid drop operation');
       return;
     }
 
@@ -355,7 +453,8 @@ export class TagTreeView extends ItemView {
 
     // If targetTag doesn't exist, create it
     if (!targetParent) {
-      console.warn('Target tag not found');
+      // Remove console logs from handleTagDragAndDrop
+      // console.warn('Target tag not found');
       return;
     }
 
@@ -480,6 +579,31 @@ export class TagTreeView extends ItemView {
         margin-right: 5px; /* Space between arrow and tag name */
         cursor: pointer; /* Change cursor to pointer */
         font-size: inherit; /* Make the icon size inherit from the text */
+      }
+      .toolbar-item {
+        padding: 2px;
+        margin: 4px; /* Add margin for spacing between buttons */
+        background-color: #f0f0f05c; /* Light background for tags */
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        width: 24px; /* Default size */
+        height: 24px; /* Default size */
+      }
+        .tag-toolbar {
+    display: flex; /* Use Flexbox */
+    justify-content: center; /* Center the buttons horizontally */
+    align-items: center; /* Center the buttons vertically */
+    top: 0; /* Align to the top */
+    left: 0; /* Align to the left */
+    right: 0; /* Align to the right */
+}
+      .icon-size {
+        width: 18px; /* Default size */
+        height: 18px; /* Default size */
+        /* You can also use percentages or other units for responsiveness */
+        /* width: 100%; */
+        /* height: auto; */
       }
     `;
     document.head.appendChild(style);
